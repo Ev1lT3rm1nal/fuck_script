@@ -3,6 +3,16 @@ name = "fuck_script"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+clap = { version = "4.0.32", features = ["derive"] }
+
+[profile.release]
+strip = true
+panic = "abort"
+lto = true
+opt-level = "z"
+codegen-units = 1
+
+[lib]
+name = "compiler"
+path = "src/compiler/compiler.rs"
