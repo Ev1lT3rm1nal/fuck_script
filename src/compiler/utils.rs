@@ -1,6 +1,6 @@
 use crate::lexer::Position;
 
-pub fn string_with_arrows(text: &str, pos_start: &Position, pos_end: &Position) -> String {
+pub fn string_with_arrows(text: String, pos_start: &Position, pos_end: &Position) -> String {
     let mut result = String::new();
 
     // Calculate indices

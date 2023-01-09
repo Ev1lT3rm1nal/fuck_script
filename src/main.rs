@@ -6,6 +6,7 @@ use std::{error::Error, io::Read};
 use compiler::lexer::Lexer;
 
 use clap::Parser;
+use compiler::lexer;
 
 #[derive(Parser, Debug)]
 #[command(author = "Oscar M", version = "0.1.0beta", about = "FuckScript compiler that compiles to Brainf*ck", long_about = None)]
@@ -42,22 +43,11 @@ fn main() -> Result<(), Box<dyn Error>> {
                     let mut buffer = String::new();
                     file.read_to_string(&mut buffer)?;
                     let mut lexer = Lexer::new(
-                        input.as_path().to_str().unwrap(),
-                        buffer.as_str(),
+                        input.as_path().to_str().unwrap().to_owned(),
+                        buffer,
                     );
                     let tokens = lexer.make_tokens();
-                    match tokens {
-                        Ok(tokens) => {
-                            let mut parser = compiler::parser::Parser::new(tokens);
-                            let bin = parser.parse();
-                            println!("{:?}", bin)  
-                            
-                        }
-                        Err(err) => {
-                            println!("Error: {}", err);
-                        }
-                    }
-                    Ok(())
+                    tokens2parser(tokens)
                 }
                 Err(err) => Err(Box::new(io::Error::new(
                     io::ErrorKind::Other,
@@ -73,21 +63,26 @@ fn main() -> Result<(), Box<dyn Error>> {
                 print!("repl> ");
                 io::stdout().flush()?;
                 stdin.read_line(&mut buffer)?;
-                let mut lexer = Lexer::new("stdout", buffer.as_str());
+                let mut lexer = Lexer::new("stdout".to_owned(), buffer.clone());
                 let tokens = lexer.make_tokens();
-                match tokens {
-                    Ok(tokens) => {
-                        let mut parser = compiler::parser::Parser::new(tokens);
-                        let bin = parser.parse();
-                        println!("{:?}", bin)
-                        
-                    }
-                    Err(err) => {
-                        println!("Error: {}", err);
-                    }
-                }
+                tokens2parser(tokens)?;
                 buffer.clear();
             }
+        }
+    }
+}
+
+fn tokens2parser(tokens: Result<Vec<lexer::Token>, compiler::errors::LexerError>) -> Result<(), Box<dyn Error>> {
+    return match tokens {
+        Ok(tokens) => {
+            let mut parser = compiler::parser::Parser::new(tokens);
+            let bin = parser.parse();
+            println!("{:?}", bin);
+            Ok(())
+        }
+        Err(err) => {
+            println!("Error: {}", err);
+            Ok(())
         }
     }
 }

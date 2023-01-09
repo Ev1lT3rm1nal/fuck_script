@@ -14,7 +14,7 @@ pub enum NumberNode {
 pub struct BinOp {
     left: Box<OpSum>,
     right: Box<OpSum>,
-    op: lexer::TokenValue,
+    op: TokenValue,
 }
 
 #[derive(Debug)]
@@ -36,7 +36,7 @@ pub struct Parser {
     token_index: isize,
 }
 
-impl Parser {
+impl<'a> Parser {
     pub fn new(tokens: Vec<lexer::Token>) -> Parser {
         return Parser {
             tokens,
@@ -75,7 +75,7 @@ impl Parser {
         }
     }
 
-    fn bin_op(&mut self, func: fn(&mut Parser) -> OpSum, ops: Vec<lexer::TokenValue>) -> OpSum {
+    fn bin_op(&mut self, func: fn(&mut Parser) -> OpSum, ops: Vec<TokenValue>) -> OpSum {
         let mut left: OpSum = func(self);
 
         while self.current_token.is_some()
@@ -97,14 +97,14 @@ impl Parser {
     pub fn term(&mut self) -> OpSum {
         return self.bin_op(
             Parser::factor,
-            vec![lexer::TokenValue::MULTIPLY, lexer::TokenValue::DIVIDE],
+            vec![TokenValue::MULTIPLY, TokenValue::DIVIDE],
         );
     }
 
     pub fn expr(&mut self) -> OpSum {
         return self.bin_op(
             Parser::term,
-            vec![lexer::TokenValue::PLUS, lexer::TokenValue::MINUS],
+            vec![TokenValue::PLUS, TokenValue::MINUS],
         );
     }
 

@@ -1,6 +1,4 @@
-#![allow(dead_code)]
-
-use crate::errors::{LexerError, DataError};
+use crate::errors::{DataError, LexerError};
 
 pub const DIGITS: &str = "0123456789";
 
@@ -27,25 +25,45 @@ pub enum TokenValue {
 #[derive(Debug, Clone)]
 pub struct Token {
     pub value: TokenValue,
+    pub pos_start: Option<Position>,
+    pub pos_end: Option<Position>,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct Position<'a> {
+impl Token {
+    pub fn new(value: TokenValue, pos_start: Option<Position>, pos_end: Option<Position>) -> Token {
+        let mut token = Token {
+            value,
+            pos_start,
+            pos_end: pos_end.clone(),
+        };
+        if token.pos_start.is_some() {
+            token.pos_end = token.pos_start.clone();
+            token.pos_end.as_mut().unwrap().advance(None);
+        }
+        if pos_end.is_some() {
+            token.pos_end = pos_end;
+        }
+        return token;
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Position {
     pub index: isize,
     pub ln: usize,
     pub col: isize,
-    pub filename: &'a str,
-    pub text: &'a str,
+    pub filename: String,
+    pub text: String,
 }
 
-impl<'a> Position<'a> {
-    pub fn new(filename: &'a str, text: &'a str) -> Position<'a> {
+impl Position {
+    pub fn new(filename: String, text: String) -> Position {
         Position {
             index: -1,
             ln: 0,
             col: -1,
-            filename: filename,
-            text: text,
+            filename,
+            text,
         }
     }
 
@@ -60,20 +78,20 @@ impl<'a> Position<'a> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct Lexer<'a> {
-    pub filename: &'a str,
-    pub text: &'a str,
-    pub pos: Position<'a>,
+#[derive(Debug, Clone)]
+pub struct Lexer {
+    pub filename: String,
+    pub text: String,
+    pub pos: Position,
     pub current_char: Option<char>,
 }
 
-impl<'a> Lexer<'a> {
-    pub fn new(filename: &'a str, text: &'a str) -> Lexer<'a> {
+impl Lexer {
+    pub fn new(filename: String, text: String) -> Lexer {
         Lexer {
-            filename: filename,
-            text: text,
-            pos: Position::new(filename, text),
+            filename: filename.clone(),
+            text:text.clone(),
+            pos: Position::new(filename.clone().to_owned(), text.clone().to_owned()),
             current_char: None,
         }
     }
@@ -87,11 +105,11 @@ impl<'a> Lexer<'a> {
         };
     }
 
-    fn make_number(&mut self) -> Token {
+    fn make_number(& mut self) -> Token {
         let mut str = String::new();
         let mut dot_count: usize = 0;
 
-        for (i, c) in self.text.char_indices().skip(self.pos.index as usize) {
+        for (i, c) in self.text.clone().char_indices().skip(self.pos.index as usize) {
             if !DIGITS.contains(&c.to_string()) && c != '.' {
                 break;
             }
@@ -107,91 +125,70 @@ impl<'a> Lexer<'a> {
             self.advance();
         }
 
-        if dot_count == 0 {
-            return Token {
-                value: TokenValue::INT(str.parse::<isize>().unwrap()),
-            };
+        return if dot_count == 0 {
+            Token::new(TokenValue::INT(str.parse().unwrap()), Some(self.pos.clone()), None)
         } else {
-            return Token {
-                value: TokenValue::FLOAT(str.parse::<f64>().unwrap()),
-            };
-        }
+            Token::new(
+                TokenValue::FLOAT(str.parse().unwrap()),
+                Some(self.pos.clone()),
+                None,
+            )
+        };
     }
 
-    pub fn make_tokens(&mut self) -> Result<Vec<Token>, LexerError> {
+    pub fn make_tokens(& mut self) -> Result<Vec<Token>, LexerError> {
         let mut tokens = Vec::new();
         self.advance();
-
         while self.current_char.is_some() {
             match self.current_char.unwrap() {
                 '\t' | ' ' | '\n' | '\r' => self.advance(),
                 '+' => {
-                    tokens.push(Token {
-                        value: TokenValue::PLUS,
-                    });
+                    tokens.push(Token::new(TokenValue::PLUS, None, None));
                     self.advance();
                 }
                 '-' => {
-                    tokens.push(Token {
-                        value: TokenValue::MINUS,
-                    });
+                    tokens.push(Token::new(TokenValue::MINUS, None, None));
                     self.advance();
                 }
                 '*' => {
-                    tokens.push(Token {
-                        value: TokenValue::MULTIPLY,
-                    });
+                    tokens.push(Token::new(TokenValue::MULTIPLY, None, None));
                     self.advance();
                 }
                 '/' => {
-                    tokens.push(Token {
-                        value: TokenValue::DIVIDE,
-                    });
+                    tokens.push(Token::new(TokenValue::DIVIDE, None, None));
                     self.advance();
                 }
                 '(' => {
-                    tokens.push(Token {
-                        value: TokenValue::LPARENT,
-                    });
+                    tokens.push(Token::new(TokenValue::LPARENT, None, None));
                     self.advance();
                 }
                 ')' => {
-                    tokens.push(Token {
-                        value: TokenValue::RPARENT,
-                    });
+                    tokens.push(Token::new(TokenValue::RPARENT, None, None));
                     self.advance();
                 }
                 '{' => {
-                    tokens.push(Token {
-                        value: TokenValue::LBRACKET,
-                    });
+                    tokens.push(Token::new(TokenValue::LBRACKET, None, None));
                     self.advance();
                 }
                 '}' => {
-                    tokens.push(Token {
-                        value: TokenValue::RBRACKET,
-                    });
+                    tokens.push(Token::new(TokenValue::RBRACKET, None, None));
                     self.advance();
                 }
                 _ => {
-                    if DIGITS.contains(&self.current_char.unwrap().to_string()) {
+                    if DIGITS.contains(self.current_char.unwrap().to_string().as_str()) {
                         tokens.push(self.make_number());
                     } else {
                         let pos_start = self.pos.clone();
                         let char = self.current_char.unwrap();
                         self.advance();
-                        return Err({
-
-                            let filename = self.filename;
-                            LexerError::IllegalCharError {
-                                char: char,
-                                data: DataError {
-                                    text: self.text,
-                                    filename,
-                                    pos_start,
-                                    pos_end: self.pos,
-                                },
-                            }
+                        return Err(LexerError::IllegalCharError {
+                            char,
+                            data: DataError {
+                                text: self.text.clone(),
+                                filename: self.filename.clone(),
+                                pos_start,
+                                pos_end: self.pos.clone(),
+                            },
                         });
                     }
                 }
