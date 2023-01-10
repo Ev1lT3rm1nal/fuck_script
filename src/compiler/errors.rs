@@ -4,7 +4,7 @@ use std::fmt;
 use crate::lexer::Position;
 use crate::utils;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DataError {
     pub text: String,
     pub pos_start: Position,
@@ -12,7 +12,7 @@ pub struct DataError {
     pub filename: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum LexerError {
     IllegalCharError { char: char, data: DataError },
     InvalidSyntaxError { data: DataError },

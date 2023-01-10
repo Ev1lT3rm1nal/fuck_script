@@ -1,15 +1,16 @@
 // Replace always f64 for f128
 
+use crate::errors::LexerError;
 use crate::lexer;
 use crate::lexer::{TokenValue};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum NumberNode {
     Int(isize),
     Float(f64),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct BinOp {
     left: Box<OpSum>,
@@ -17,7 +18,7 @@ pub struct BinOp {
     op: TokenValue,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum OpSum {
     OpSum(Box<OpSum>),
     BinOp(BinOp),
@@ -28,6 +29,49 @@ pub enum OpSum {
 pub fn parse(tokens: Vec<lexer::Token>) -> OpSum {
     let mut parser = Parser::new(tokens);
     return parser.parse();
+}
+
+#[derive(Debug, Clone)]
+struct ParseResult {
+    node: OpSum,
+    error: Option<LexerError>,
+}
+
+enum RegisterData {
+    RegisterData(ParseResult),
+    OpSum(OpSum),
+}
+
+impl ParseResult {
+    fn new() -> ParseResult {
+        return ParseResult {
+            node: OpSum::Null,
+            error: None,
+        };
+    }
+
+    fn register(&mut self, res: RegisterData) -> RegisterData {
+        match res {
+            RegisterData::RegisterData(res) => {
+                if res.error.is_some() {
+                    self.error = res.error;
+                }
+                return RegisterData::OpSum(res.node);
+            }
+            RegisterData::OpSum(res) => {
+                return RegisterData::OpSum(res);
+            }
+        }
+    }
+
+    fn success(&mut self, node: OpSum)  {
+        self.node = node;
+    }
+
+    fn failure(&mut self, error: LexerError) {
+        self.error = Some(error);
+    }
+    
 }
 
 pub struct Parser {
