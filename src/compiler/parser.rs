@@ -33,39 +33,39 @@ pub fn parse(tokens: Vec<lexer::Token>) -> OpSum {
 
 #[derive(Debug, Clone)]
 struct ParseResult {
-    node: OpSum,
+    node: Option<lexer::Token>,
     error: Option<LexerError>,
 }
 
 enum RegisterData {
-    RegisterData(ParseResult),
-    OpSum(OpSum),
+    ParseResult(ParseResult),
+    Token(Option<lexer::Token>),
 }
 
 impl ParseResult {
     fn new() -> ParseResult {
         return ParseResult {
-            node: OpSum::Null,
+            node: None,
             error: None,
         };
     }
 
     fn register(&mut self, res: RegisterData) -> RegisterData {
         match res {
-            RegisterData::RegisterData(res) => {
+            RegisterData::ParseResult(res) => {
                 if res.error.is_some() {
                     self.error = res.error;
                 }
-                return RegisterData::OpSum(res.node);
+                return RegisterData::Token(res.node);
             }
-            RegisterData::OpSum(res) => {
-                return RegisterData::OpSum(res);
+            RegisterData::Token(res) => {
+                return RegisterData::Token(res);
             }
         }
     }
 
-    fn success(&mut self, node: OpSum)  {
-        self.node = node;
+    fn success(&mut self, node: lexer::Token)  {
+        self.node = Some(node);
     }
 
     fn failure(&mut self, error: LexerError) {
